@@ -1,6 +1,6 @@
 # cf-copilot-service
  
-这是一个将兼容OpenAI API的会话请求转发到Github Copilot Chat API的Cloudflare脚本，模型参数仅支持`gpt-4`和`gpt-3.5-turbo`，实测使用其他模型均会以默认的3.5处理（对比OpenAI API的返回结果，猜测应该是最早的版本`gpt-4-0314`和`gpt-3.5-0301`）
+这是一个将兼容OpenAI API的会话请求转发到Github Copilot Chat API的Cloudflare Worker脚本，模型参数仅支持`gpt-4`和`gpt-3.5-turbo`，实测使用其他模型均会以默认的3.5处理（对比OpenAI API的返回结果，猜测应该是最早的版本`gpt-4-0314`和`gpt-3.5-turbo-0301`）
 
 ## 使用方法
 
