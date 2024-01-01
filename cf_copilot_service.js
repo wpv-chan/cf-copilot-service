@@ -7,12 +7,26 @@ addEventListener('fetch', event => {
 async function handleRequest(request) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': '*',
   }
 
   if (request.method === 'OPTIONS') {
     return new Response(null, {
+      status: 200,
+      headers: corsHeaders,
+    })
+  }
+
+  if (request.method === 'GET') {
+    let data = {
+      object: "list",
+      data: [
+        { "id": "gpt-4", "object": "model", "created": 1687882411, "owned_by": "openai" },
+        { "id": "gpt-3.5-turbo", "object": "model", "created": 1677610602, "owned_by": "openai" },
+      ],
+    }
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: corsHeaders,
     })
@@ -48,7 +62,7 @@ async function handleRequest(request) {
     })
 
     const { readable, writable } = new TransformStream();
-    streamResponse(openAIResponse, writable);
+    streamResponse(openAIResponse, writable, requestData);
     return new Response(readable, {
       headers: {
         ...corsHeaders,
@@ -65,11 +79,12 @@ async function handleRequest(request) {
   }
 }
 
-async function streamResponse(openAIResponse, writable) {
+async function streamResponse(openAIResponse, writable, requestData) {
   const reader = openAIResponse.body.getReader();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
   const decoder = new TextDecoder("utf-8");
+  let buffer = "";
 
   function push() {
     reader.read().then(({ done, value }) => {
@@ -78,7 +93,28 @@ async function streamResponse(openAIResponse, writable) {
         return;
       }
       const chunk = decoder.decode(value, { stream: true });
-      writer.write(encoder.encode(chunk));
+      let to_send = "";
+      (buffer + chunk).split("data: ").forEach((raw) => {
+        if (raw === "")
+          return;
+        else if (!raw.endsWith("\n\n"))
+          buffer = raw;
+        else if (raw.startsWith("[DONE]"))
+          to_send += "data: [DONE]\n\n";
+        else {
+          let data = JSON.parse(raw);
+          if (data.choices[0].delta?.content === null)
+            data.choices[0].delta.content = "";
+          if (data.choices[0].finish_reason === undefined)
+            data.choices[0].finish_reason = null;
+          if (data.model === undefined && requestData.model !== undefined)
+            data.model = requestData.model;
+          if (data.object === undefined)
+            data.object = "chat.completion.chunk";
+          to_send += `data: ${JSON.stringify(data)}\n\n`;
+        }
+      });
+      writer.write(encoder.encode(to_send));
       push();
     }).catch(error => {
       console.error(error);
@@ -100,7 +136,7 @@ async function getCopilotToken(githubToken) {
   const response = await fetch(getTokenUrl, {
     headers: {
       'Authorization': `token ${githubToken}`, 
-      'User-Agent': 'GitHubCopilotChat/0.8.0',
+      'User-Agent': 'GitHubCopilotChat/0.11.1',
     }
   });
 
@@ -130,14 +166,15 @@ async function createHeaders(copilotToken) {
   return {
     'Authorization': `Bearer ${copilotToken}`,
     'X-Request-Id': `${genHexStr(8)}-${genHexStr(4)}-${genHexStr(4)}-${genHexStr(4)}-${genHexStr(12)}`,
+    'X-Github-Api-Version': "2023-07-07",
     'Vscode-Sessionid': `${genHexStr(8)}-${genHexStr(4)}-${genHexStr(4)}-${genHexStr(4)}-${genHexStr(25)}`,
     'Vscode-Machineid': genHexStr(64),
-    'Editor-Version': 'vscode/1.83.1',
-    'Editor-Plugin-Version': 'copilot-chat/0.8.0',
+    'Editor-Version': 'vscode/1.85.1',
+    'Editor-Plugin-Version': 'copilot-chat/0.11.1',
     'Openai-Organization': 'github-copilot',
     'Openai-Intent': 'conversation-panel',
     'Content-Type': 'text/event-stream; charset=utf-8',
-    'User-Agent': 'GitHubCopilotChat/0.8.0',
+    'User-Agent': 'GitHubCopilotChat/0.11.1',
     'Accept': '*/*',
     'Accept-Encoding': 'gzip,deflate,br',
     'Connection': 'close'
