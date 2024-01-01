@@ -128,7 +128,7 @@ async function streamResponse(openAIResponse, writable, requestData) {
 async function getCopilotToken(githubToken) {
   let tokenData = await GithubCopilotChat.get("copilotToken", "json");
   
-  if (tokenData && tokenData.expires_at > Date.now()) {
+  if (tokenData && tokenData.expires_at * 1000 > Date.now()) {
     return tokenData.token;
   }
 
@@ -147,10 +147,9 @@ async function getCopilotToken(githubToken) {
   }
 
   const data = await response.json();
-  const expires_at = Date.now() + data.expires_in * 1000; 
 
-  await GithubCopilotChat.put("copilotToken", JSON.stringify({ token: data.token, expires_at }), {
-    expirationTtl: data.expires_in 
+  await GithubCopilotChat.put("copilotToken", JSON.stringify({ token: data.token, expires_at: data.expires_at }), {
+    expirationTtl: data.expires_at
   });
 
   return data.token;
