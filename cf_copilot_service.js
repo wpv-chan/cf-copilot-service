@@ -53,6 +53,8 @@ async function handleRequest(request) {
 
     const requestData = await request.json()
 
+    const canStream = requestData?.stream;
+
     const openAIResponse = await fetch('https://api.githubcopilot.com/chat/completions', {
       method: 'POST',
       headers: {
@@ -61,16 +63,26 @@ async function handleRequest(request) {
       body: typeof requestData === 'object' ? JSON.stringify(requestData) : '{}',
     })
 
-    const { readable, writable } = new TransformStream();
-    streamResponse(openAIResponse, writable, requestData);
-    return new Response(readable, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      }
-    });
+    if (canStream) {
+      const { readable, writable } = new TransformStream();
+      streamResponse(openAIResponse, writable, requestData);
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        }
+      });
+    } else {
+      return new Response(openAIResponse.body, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        }
+      })
+    }
   } catch (error) {
     return new Response(error.message, {
       status: 500,
@@ -127,7 +139,7 @@ async function streamResponse(openAIResponse, writable, requestData) {
 
 async function getCopilotToken(githubToken) {
   let tokenData = await GithubCopilotChat.get(githubToken, "json");
-  
+
   if (tokenData && tokenData.expires_at * 1000 > Date.now()) {
     return tokenData.token;
   }
@@ -135,7 +147,7 @@ async function getCopilotToken(githubToken) {
   const getTokenUrl = 'https://api.github.com/copilot_internal/v2/token';
   const response = await fetch(getTokenUrl, {
     headers: {
-      'Authorization': `token ${githubToken}`, 
+      'Authorization': `token ${githubToken}`,
       'User-Agent': 'GitHubCopilotChat/0.11.1',
     }
   });
