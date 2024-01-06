@@ -63,6 +63,21 @@ async function handleRequest(request) {
       body: typeof requestData === 'object' ? JSON.stringify(requestData) : '{}',
     })
 
+    if (!openAIResponse.ok) {
+      const contentType = openAIResponse.headers.get('Content-Type')
+      const cacheControl = openAIResponse.headers.get('Cache-Control')
+      const headers = new Headers(corsHeaders)
+      if (contentType) { headers.set('Content-Type', contentType) }
+      if (cacheControl) { headers.set('Cache-Control', cacheControl) }
+      return new Response(
+        openAIResponse.body,
+        {
+          status: openAIResponse.status,
+          headers
+        }
+      )
+    }
+
     if (canStream) {
       const { readable, writable } = new TransformStream();
       streamResponse(openAIResponse, writable, requestData);
