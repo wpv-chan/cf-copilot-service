@@ -1,4 +1,4 @@
-const GithubCopilotChat = GITHUB_COPILOT_CHAT; // 此处替换你绑定KV namespace的名称
+const GithubCopilotChat = GITHUB_COPILOT_CHAT; // 此处替换你绑定 KV namespace 的名称
 
 addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
@@ -90,7 +90,13 @@ async function handleRequest(request) {
         }
       });
     } else {
-      return new Response(openAIResponse.body, {
+      let body = await openAIResponse.json();
+      // OpenAI Docs: https://platform.openai.com/docs/api-reference/chat/object
+      body.object = "chat.completion"
+      if (body.model === undefined && requestData.model !== undefined) {
+        body.model = requestData.model;
+      }
+      return new Response(JSON.stringify(body), {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json; charset=utf-8',
