@@ -8,7 +8,7 @@
 
 1. 你需要拥有一个有Github Copilot权限的Github账户
 
-2. 使用[cocopilot](https://cocopilot.org/copilot/token)获取token
+2. 获取你的Token，[参考这里](https://github.com/aaamoon/copilot-gpt4-service#%E8%8E%B7%E5%8F%96-copilot-token)
 
 3. 创建一个Cloudflare Worker
 
@@ -27,7 +27,7 @@
 
 9.  打开任意支持自定义OpenAI Endpoint的前端应用
 
-10. 设置Endpoint为你的Worker地址，key为第2步中的token
+10. 设置Endpoint为你的Worker地址，key为第2步中的Token
 
 11. 设置完成
 
